@@ -34,13 +34,6 @@ int max(int a, int b) {
     return (a > b) ? a : b;
 }
 
-int calculaBalanceamento(NodoAVL* nodo) {
-    if (nodo == NULL) {
-        return 0;
-    }
-    return altura(nodo->esq) - altura(nodo->dir);
-}
-
 NodoAVL* rotacaoDireita(NodoAVL* y) {
     NodoAVL* x = y->esq;
     NodoAVL* T2 = x->dir;
@@ -67,6 +60,13 @@ NodoAVL* rotacaoEsquerda(NodoAVL* x) {
     return y;
 }
 
+int calculaBalanceamento(NodoAVL* nodo) {
+    if (nodo == NULL) {
+        return 0;
+    }
+    return altura(nodo->esq) - altura(nodo->dir);
+}
+
 NodoAVL* inserir(NodoAVL* nodo, int dado) {
     if (nodo == NULL) {
         return criaNodo(dado);
@@ -85,24 +85,20 @@ NodoAVL* inserir(NodoAVL* nodo, int dado) {
 
     int balanceamento = calculaBalanceamento(nodo);
 
-    // Casos de desbalanceamento
-    // Rotação à direita simples
+    // Casos de desbalanceamento e rotações
     if (balanceamento > 1 && dado < nodo->esq->dado) {
         return rotacaoDireita(nodo);
     }
 
-    // Rotação à esquerda simples
     if (balanceamento < -1 && dado > nodo->dir->dado) {
         return rotacaoEsquerda(nodo);
     }
 
-    // Rotação à esquerda e, em seguida, à direita
     if (balanceamento > 1 && dado > nodo->esq->dado) {
         nodo->esq = rotacaoEsquerda(nodo->esq);
         return rotacaoDireita(nodo);
     }
 
-    // Rotação à direita e, em seguida, à esquerda
     if (balanceamento < -1 && dado < nodo->dir->dado) {
         nodo->dir = rotacaoDireita(nodo->dir);
         return rotacaoEsquerda(nodo);
@@ -114,6 +110,76 @@ NodoAVL* inserir(NodoAVL* nodo, int dado) {
 void insereNaAVL(AVLTree* avl, int valor) {
     if (avl != NULL) {
         avl->raiz = inserir(avl->raiz, valor);
+    }
+}
+
+NodoAVL* encontrarMinimo(NodoAVL* nodo) {
+    NodoAVL* atual = nodo;
+    while (atual->esq != NULL) {
+        atual = atual->esq;
+    }
+    return atual;
+}
+
+NodoAVL* remover(NodoAVL* nodo, int dado) {
+    if (nodo == NULL) {
+        return nodo;
+    }
+
+    if (dado < nodo->dado) {
+        nodo->esq = remover(nodo->esq, dado);
+    } else if (dado > nodo->dado) {
+        nodo->dir = remover(nodo->dir, dado);
+    } else {
+        if (nodo->esq == NULL || nodo->dir == NULL) {
+            NodoAVL* temp = nodo->esq ? nodo->esq : nodo->dir;
+            if (temp == NULL) {
+                temp = nodo;
+                nodo = NULL;
+            } else {
+                *nodo = *temp;
+            }
+            free(temp);
+        } else {
+            NodoAVL* temp = encontrarMinimo(nodo->dir);
+            nodo->dado = temp->dado;
+            nodo->dir = remover(nodo->dir, temp->dado);
+        }
+    }
+
+    if (nodo == NULL) {
+        return nodo;
+    }
+
+    nodo->altura = 1 + max(altura(nodo->esq), altura(nodo->dir));
+
+    int balanceamento = calculaBalanceamento(nodo);
+
+    // Casos de desbalanceamento e rotações após a remoção
+    if (balanceamento > 1 && calculaBalanceamento(nodo->esq) >= 0) {
+        return rotacaoDireita(nodo);
+    }
+
+    if (balanceamento > 1 && calculaBalanceamento(nodo->esq) < 0) {
+        nodo->esq = rotacaoEsquerda(nodo->esq);
+        return rotacaoDireita(nodo);
+    }
+
+    if (balanceamento < -1 && calculaBalanceamento(nodo->dir) <= 0) {
+        return rotacaoEsquerda(nodo);
+    }
+
+    if (balanceamento < -1 && calculaBalanceamento(nodo->dir) > 0) {
+        nodo->dir = rotacaoDireita(nodo->dir);
+        return rotacaoEsquerda(nodo);
+    }
+
+    return nodo;
+}
+
+void removeNaAVL(AVLTree* avl, int valor) {
+    if (avl != NULL) {
+        avl->raiz = remover(avl->raiz, valor);
     }
 }
 
@@ -141,6 +207,13 @@ int main() {
     insereNaAVL(avl, 8);
 
     printf("Valores na AVL em ordem:\n");
+    emOrdem(avl->raiz);
+    printf("\n");
+
+    // Removendo o valor 10 da árvore
+    removeNaAVL(avl, 10);
+
+    printf("Valores na AVL após remover o 10:\n");
     emOrdem(avl->raiz);
     printf("\n");
 
